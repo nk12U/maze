@@ -5,79 +5,98 @@
 #define NG 1
 #define VISITED 2
 
-#define IN_BOUNDS(x, y) ((x) >= 0 && (x) < MAZE_SIZE && (y) >= 0 && (y) < MAZE_SIZE)
-
 typedef struct {
     int x;
     int y;
-} Position;
+} Coordinate;
 
-int maze[MAZE_SIZE][MAZE_SIZE];
 int stack_top;
 int sol_num;
-Position stack_visit[100]; // Adjust size as needed
-Position paths[100][100];  // Adjust sizes as needed
+Coordinate stack_visit[100];
+Coordinate paths[100][100];
 int path_length[100];
-int goal_x, goal_y;
 
-void visit(int x, int y) {
-    int k;
-    maze[x][y] = VISITED;                                           // Mark as visited
-    stack_visit[stack_top] = (Position){x, y};                      // Push current position onto stack
-    if(x == goal_x && y == goal_y){                                 // Reached goal
-        for(k = 0; k <= stack_top; k++){
-            paths[sol_num][k] = stack_visit[k];                     // Copy current path
+// maze[x][y]に迷路図情報を設定する
+int maze[MAZE_SIZE][MAZE_SIZE] = {
+    {NG, NG, NG, NG, NG, NG, NG},
+    {NG, OK, OK, OK, OK, OK, NG},
+    {NG, OK, NG, OK, NG, OK, NG},
+    {NG, OK, OK, OK, OK, NG, NG},
+    {NG, NG, OK, NG, OK, NG, NG},
+    {NG, OK, OK, OK, OK, OK, NG},
+    {NG, NG, NG, NG, NG, NG, NG}
+};
+    
+// 始点と終点の座標を設定する
+int start_x = 1, start_y = 1;
+int goal_x = 5, goal_y = 5;
+
+void visit(int x, int y){
+    maze[x][y] = VISITED;                                           // 足跡フラグを入れる
+    stack_visit[stack_top] = (Coordinate){x, y};                    // スタックに座標を入れる
+    if(x == goal_x && y == goal_y){                                 // 終点に到達
+        for(int k = 0; k <= stack_top; k++){
+            paths[sol_num][k] = stack_visit[k];                     
         }
         path_length[sol_num] = stack_top + 1;
-        sol_num++;                                                  // Increment solution count
-    }
-    else{
-        stack_top++;
-        // Check each direction with bounds checking
-        if(IN_BOUNDS(x, y+1) && maze[x][y+1] == OK)               // Up                                
+        sol_num = sol_num + 1;                                               
+    }else{
+        stack_top = stack_top + 1;                                
+        if(maze[x][y+1] == OK)                                      // Up                                
             visit(x, y+1);
-        if(IN_BOUNDS(x+1, y) && maze[x+1][y] == OK)               // Right
+        if(maze[x+1][y] == OK)                                      // Right
             visit(x+1, y);
-        if(IN_BOUNDS(x, y-1) && maze[x][y-1] == OK)               // Down                         
+        if(maze[x][y-1] == OK)                                      // Down                         
             visit(x, y-1);
-        if(IN_BOUNDS(x-1, y) && maze[x-1][y] == OK)               // Left
+        if(maze[x-1][y] == OK)                                      // Left
             visit(x-1, y);
-        stack_top--;
+        stack_top = stack_top - 1;                                 
     }
-    maze[x][y] = OK;                                                // Unmark as visited
+    maze[x][y] = OK;
 }
 
-int main(void) {
-    int i, j;
+// mazeを反時計回りに90度回転して表示する
+void print(int maze[MAZE_SIZE][MAZE_SIZE]){
+    int rotated_start_x = start_y;
+    int rotated_start_y = MAZE_SIZE - 1 - start_x;
+    int rotated_goal_x = goal_y;
+    int rotated_goal_y = MAZE_SIZE - 1 - goal_x;
+
+    for(int i = 0; i < MAZE_SIZE; i++){
+        for(int j = 0; j < MAZE_SIZE; j++){
+            int original_x = j;
+            int original_y = MAZE_SIZE - 1 - i;
+            
+            if(original_x == start_x && original_y == start_y){
+                printf("S");
+            }else if(original_x == goal_x && original_y == goal_y){
+                printf("G");
+            }else if(maze[original_x][original_y] == OK){
+                printf("□");    
+            }else if(maze[original_x][original_y] == NG){
+                printf("■");
+            }else{
+                printf(" ");
+            }
+        }
+        printf("\n");
+    }
+    printf("\n");
+}
+
+int main(void){
     stack_top = 0;
     sol_num = 0;
-    // Initialize maze
-    for(i = 0; i < MAZE_SIZE; i++){
-        for(j = 0; j < MAZE_SIZE; j++){
-            maze[i][j] = NG;
-        }
-    }
-
-    // Set maze paths
-    maze[1][1] = OK; maze[1][2] = OK; maze[1][3] = OK; maze[1][4] = OK; maze[1][5] = OK;
-    maze[2][1] = OK; maze[2][2] = NG; maze[2][3] = OK; maze[2][4] = NG; maze[2][5] = OK;
-    maze[3][1] = OK; maze[3][2] = OK; maze[3][3] = OK; maze[3][4] = OK; maze[3][5] = NG;
-    maze[4][1] = NG; maze[4][2] = OK; maze[4][3] = NG; maze[4][4] = OK; maze[4][5] = NG;
-    maze[5][1] = OK; maze[5][2] = OK; maze[5][3] = OK; maze[5][4] = OK; maze[5][5] = OK;
-        
-    // Set start and goal positions
-    int start_x = 1, start_y = 1;
-    goal_x = 5; goal_y = 5;
-
+    // 迷路の表示
+    print(maze);
+    // 迷路の探索
     visit(start_x, start_y);
     if(sol_num == 0){
         printf("迷路の解は見つからなかった\n");
     }else{
-        // Display all paths
-        int u, v;
-        for(u = 0; u < sol_num; u++){
-            printf("解 %d:\n", u+1);
-            for(v = 0; v < path_length[u]; v++){
+        for(int u = 0; u < sol_num; u++){
+            printf("path %d:\n", u+1);
+            for(int v = 0; v < path_length[u]; v++){
                 printf("(%d, %d) ", paths[u][v].x, paths[u][v].y);
             }
             printf("\n");
